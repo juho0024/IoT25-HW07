@@ -1,0 +1,18 @@
+// server code
+
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
+
+void setup() {
+  Serial.begin(115200);
+  BLEDevice::init("BLE_Server"); 
+  BLEServer *pServer = BLEDevice::createServer();
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->start();
+  Serial.println("BLE Server 광고 시작");
+}
+
+void loop() {
+  delay(2000); // 지속 광고
+}
