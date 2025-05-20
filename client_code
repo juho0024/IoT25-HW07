@@ -1,61 +1,59 @@
-// client code
-
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
+#include <math.h>
+
+#define SCAN_TIME 5
+#define RSSI_WINDOW_SIZE 10
 
 BLEScan* pBLEScan;
-float lastDistance = 0;
-String targetDeviceName = "BLE_Server"; // 서버 ESP32 이름
+int rssiBuffer[RSSI_WINDOW_SIZE];
+int rssiIndex = 0;
+bool bufferFilled = false;
+bool deviceDetected = false;
 
-bool serverConnected = false;
-bool wasPreviouslyConnected = false;
+float calculateDistance(float rssi, int txPower = -65, float n = 2.0) {
+  return pow(10.0, (txPower - rssi) / (10.0 * n));
+}
+
+float getAveragedRSSI(int newRSSI) {
+  rssiBuffer[rssiIndex] = newRSSI;
+  rssiIndex = (rssiIndex + 1) % RSSI_WINDOW_SIZE;
+  if (rssiIndex == 0) bufferFilled = true;
+
+  int sum = 0;
+  int count = bufferFilled ? RSSI_WINDOW_SIZE : rssiIndex;
+  for (int i = 0; i < count; i++) sum += rssiBuffer[i];
+  return sum / (float)count;
+}
+
+class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
+  void onResult(BLEAdvertisedDevice advertisedDevice) {
+    if (advertisedDevice.getName() == "HW7_SERVER") {
+      if (!deviceDetected) {
+        Serial.println("BLE 서버에 연결됨!");
+        deviceDetected = true;
+      }
+      int rawRSSI = advertisedDevice.getRSSI();
+      float avgRSSI = getAveragedRSSI(rawRSSI);
+      float distance = calculateDistance(avgRSSI);
+      Serial.printf("RAW RSSI: %d dBm | AVG: %.1f dBm → 추정 거리: %.2f m\n",
+                    rawRSSI, avgRSSI, distance);
+    }
+  }
+};
 
 void setup() {
   Serial.begin(115200);
   BLEDevice::init("");
   pBLEScan = BLEDevice::getScan();
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
   pBLEScan->setActiveScan(true);
-  Serial.println("📡 BLE 거리 측정 클라이언트 시작");
 }
 
 void loop() {
-  BLEScanResults* foundDevices = pBLEScan->start(1, false);
-  serverConnected = false;
-
-  for (int i = 0; i < foundDevices->getCount(); ++i) {
-    BLEAdvertisedDevice device = foundDevices->getDevice(i);
-    if (device.getName() == targetDeviceName) {
-      serverConnected = true;
-
-      if (!wasPreviouslyConnected) {
-        Serial.println("✅ BLE 서버가 감지되었습니다. 거리 측정 시작...");
-        wasPreviouslyConnected = true;
-      }
-
-      int rssi = device.getRSSI();
-      float txPower = -70.0;
-      float n = 2.7;
-
-      lastDistance = pow(10.0, (txPower - rssi) / (10 * n));
-
-      Serial.print("📶 RSSI: ");
-      Serial.print(rssi);
-      Serial.print(" dBm → 📏 거리 추정: ");
-      Serial.print(lastDistance, 2);
-      Serial.println(" m");
-      break;
-    }
-  }
-
+  pBLEScan->start(SCAN_TIME, false);
   pBLEScan->clearResults();
-
-  // 만약 이번엔 감지 안 됐고, 이전에는 연결되어 있었다면
-  if (!serverConnected && wasPreviouslyConnected) {
-    Serial.println("❌ BLE 서버가 더 이상 감지되지 않습니다. 측정 중단.");
-    wasPreviouslyConnected = false;
-  }
-
-  delay(1000);
+  delay(500);
 }
