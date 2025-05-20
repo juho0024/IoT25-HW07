@@ -20,8 +20,36 @@ https://github.com/user-attachments/assets/56dbe823-8921-4a68-8568-93f84c82ee53
 
 
 
+< 오차 그래프 >
+![image](https://github.com/user-attachments/assets/b1a57e2e-3d93-4049-9fc3-a47300d6f951)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+< advanced >
+1. 측정거리 웹에 띄우기
+
+https://github.com/user-attachments/assets/ccb2db2f-0a08-4cfe-89e0-f2942db72b81
+
+
+2. 거리 이내 led 점등
+
+https://github.com/user-attachments/assets/d91aa951-bf55-44fc-bac0-ee2727b240c9
 
 
 
